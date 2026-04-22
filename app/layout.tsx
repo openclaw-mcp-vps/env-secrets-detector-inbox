@@ -1,50 +1,39 @@
 import type { Metadata } from "next";
-import Script from "next/script";
-import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
-import "./globals.css";
+import { Manrope, Space_Grotesk } from "next/font/google";
+import "@/app/globals.css";
 
-const headingFont = Space_Grotesk({
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-heading",
-  display: "swap"
+  variable: "--font-manrope"
 });
 
-const monoFont = IBM_Plex_Mono({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-mono",
-  display: "swap",
-  weight: ["400", "500", "600"]
+  variable: "--font-space-grotesk"
 });
-
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://env-secrets-detector-inbox.com";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: "Inbox Secrets Detector | Stop API Key Leaks in Gmail",
+  metadataBase: new URL("https://inbox-secrets-detector.app"),
+  title: "Inbox Secrets Detector | Scan Gmail for leaked API keys",
   description:
-    "Scan Gmail bodies and attachments for leaked API keys, passwords, tokens, and credentials before they become incidents.",
-  keywords: [
-    "gmail security",
-    "api key leak detector",
-    "email credential scanner",
-    "founder security",
-    "secrets detection"
-  ],
+    "Connect Gmail read-only and detect leaked API keys, tokens, and credentials buried in emails and attachments before attackers do.",
   openGraph: {
-    type: "website",
     title: "Inbox Secrets Detector",
     description:
-      "Connect Gmail, scan every thread and attachment for 50+ credential patterns, and ship a redaction report instantly.",
-    url: siteUrl,
-    siteName: "Inbox Secrets Detector"
+      "Security-first inbox scanner for founders. Detect, redact, and report leaked credentials across email threads and attachments.",
+    url: "https://inbox-secrets-detector.app",
+    siteName: "Inbox Secrets Detector",
+    type: "website"
   },
   twitter: {
     card: "summary_large_image",
     title: "Inbox Secrets Detector",
-    description: "Catch leaked AWS, Stripe, OpenAI, and database credentials hidden in email threads."
+    description:
+      "Find exposed API keys in Gmail attachments and message bodies. Generate actionable remediation reports."
   },
-  icons: {
-    icon: "/favicon.ico"
+  robots: {
+    index: true,
+    follow: true
   }
 };
 
@@ -54,13 +43,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${headingFont.variable} ${monoFont.variable} min-h-screen antialiased [font-family:var(--font-heading)]`}
-      >
-        <Script src="https://app.lemonsqueezy.com/js/lemon.js" strategy="afterInteractive" />
-        {children}
-      </body>
+    <html lang="en" className={`${manrope.variable} ${spaceGrotesk.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }

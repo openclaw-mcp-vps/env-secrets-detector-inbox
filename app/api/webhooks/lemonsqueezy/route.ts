@@ -1,48 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import { upsertPaidMailbox } from "@/lib/database";
 import {
-  extractPaidMailbox,
-  isPaymentEvent,
-  isRevocationEvent,
-  type LemonSqueezyWebhookPayload,
-  verifyWebhookSignature
-} from "@/lib/lemonsqueezy";
+  hasProcessedWebhookEvent,
+  markWebhookEventProcessed,
+  upsertEntitlement
+} from "@/lib/database";
+import { entitlementFromCheckoutSession, verifyStripeWebhookEvent } from "@/lib/lemonsqueezy";
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export const runtime = "nodejs";
+
+export async function POST(request: NextRequest) {
+  const signature = request.headers.get("stripe-signature");
+  if (!signature) {
+    return NextResponse.json({ error: "Missing stripe-signature header." }, { status: 400 });
+  }
+
   const rawBody = await request.text();
-  const signature = request.headers.get("x-signature");
 
-  if (!verifyWebhookSignature(rawBody, signature)) {
-    return NextResponse.json({ ok: false, message: "Invalid webhook signature." }, { status: 401 });
-  }
-
-  let payload: LemonSqueezyWebhookPayload;
   try {
-    payload = JSON.parse(rawBody) as LemonSqueezyWebhookPayload;
-  } catch {
-    return NextResponse.json({ ok: false, message: "Malformed webhook payload." }, { status: 400 });
+    const event = verifyStripeWebhookEvent(rawBody, signature);
+
+    if (await hasProcessedWebhookEvent(event.id)) {
+      return NextResponse.json({ ok: true, duplicate: true });
+    }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      if (session.payment_status === "paid" || session.status === "complete") {
+        const entitlement = entitlementFromCheckoutSession(session);
+        if (entitlement) {
+          await upsertEntitlement(entitlement.email, {
+            active: true,
+            source: "stripe-webhook",
+            stripeCustomerId: entitlement.customerId,
+            checkoutSessionId: entitlement.checkoutSessionId
+          });
+        }
+      }
+    }
+
+    await markWebhookEventProcessed({
+      eventId: event.id,
+      type: event.type,
+      receivedAt: new Date().toISOString()
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown webhook verification error.";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
-
-  const { mailbox, eventName, orderId, customerId, validUntil } = extractPaidMailbox(payload);
-
-  if (!isPaymentEvent(eventName)) {
-    return NextResponse.json({ ok: true, message: `Ignored event: ${eventName}` });
-  }
-
-  if (!mailbox) {
-    return NextResponse.json({ ok: true, message: "No mailbox identifier in webhook custom data." });
-  }
-
-  const fallbackExpiry = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString();
-
-  await upsertPaidMailbox({
-    mailbox,
-    orderId,
-    customerId,
-    sourceEvent: eventName,
-    paidAt: new Date().toISOString(),
-    validUntil: isRevocationEvent(eventName) ? new Date(0).toISOString() : validUntil ?? fallbackExpiry
-  });
-
-  return NextResponse.json({ ok: true });
 }

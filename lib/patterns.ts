@@ -1,517 +1,470 @@
-import type { SecretSeverity } from "@/lib/types";
+import type { SecretPatternDefinition } from "@/lib/types";
 
-export interface SecretPattern {
-  id: string;
-  name: string;
-  description: string;
-  severity: SecretSeverity;
-  category: string;
-  regex: RegExp;
-}
-
-export const SECRET_PATTERNS: SecretPattern[] = [
+export const SECRET_PATTERNS: SecretPatternDefinition[] = [
   {
     id: "aws_access_key",
     name: "AWS Access Key ID",
-    description: "Static AWS IAM access key ID",
+    description: "Long-lived AWS access key identifier.",
     severity: "critical",
-    category: "cloud",
-    regex: /\bAKIA[0-9A-Z]{16}\b/g
+    regex: /\b(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|ASIA|ANPA|ANVA|ASCA)[A-Z0-9]{16}\b/g,
+    redactionLabel: "AWS_ACCESS_KEY"
   },
   {
     id: "aws_secret_key",
     name: "AWS Secret Access Key",
-    description: "AWS IAM secret access key assignment",
+    description: "40-character AWS secret value usually paired with an access key ID.",
     severity: "critical",
-    category: "cloud",
-    regex: /(?:aws|amazon)?[_\-\s]*(?:secret|sec)[_\-\s]*access[_\-\s]*key\s*[:=]\s*['"]?([A-Za-z0-9/+=]{40})['"]?/gi
-  },
-  {
-    id: "aws_session_token",
-    name: "AWS Session Token",
-    description: "Temporary AWS session credential",
-    severity: "high",
-    category: "cloud",
-    regex: /(?:aws[_\-\s]*session[_\-\s]*token)\s*[:=]\s*['"]?([A-Za-z0-9/+=]{60,})['"]?/gi
-  },
-  {
-    id: "stripe_live_secret",
-    name: "Stripe Live Secret Key",
-    description: "Stripe live server-side key",
-    severity: "critical",
-    category: "payments",
-    regex: /\bsk_live_[0-9A-Za-z]{16,}\b/g
-  },
-  {
-    id: "stripe_restricted",
-    name: "Stripe Restricted Key",
-    description: "Stripe restricted API key",
-    severity: "high",
-    category: "payments",
-    regex: /\brk_live_[0-9A-Za-z]{16,}\b/g
-  },
-  {
-    id: "stripe_webhook",
-    name: "Stripe Webhook Secret",
-    description: "Stripe signing secret for webhook validation",
-    severity: "high",
-    category: "payments",
-    regex: /\bwhsec_[0-9A-Za-z]{16,}\b/g
-  },
-  {
-    id: "openai_key",
-    name: "OpenAI API Key",
-    description: "OpenAI API key",
-    severity: "critical",
-    category: "ai",
-    regex: /\bsk-[A-Za-z0-9]{20,}\b/g
-  },
-  {
-    id: "anthropic_key",
-    name: "Anthropic API Key",
-    description: "Anthropic API key",
-    severity: "critical",
-    category: "ai",
-    regex: /\bsk-ant-[A-Za-z0-9\-_]{16,}\b/g
-  },
-  {
-    id: "huggingface_token",
-    name: "Hugging Face Token",
-    description: "Hugging Face access token",
-    severity: "high",
-    category: "ai",
-    regex: /\bhf_[A-Za-z0-9]{30,}\b/g
-  },
-  {
-    id: "openrouter_key",
-    name: "OpenRouter Key",
-    description: "OpenRouter API key",
-    severity: "high",
-    category: "ai",
-    regex: /\bsk-or-v1-[A-Za-z0-9]{16,}\b/g
-  },
-  {
-    id: "github_pat",
-    name: "GitHub Personal Access Token",
-    description: "GitHub fine-grained or classic token",
-    severity: "critical",
-    category: "developer",
-    regex: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,255}\b/g
-  },
-  {
-    id: "github_fine_grained",
-    name: "GitHub Fine-Grained PAT",
-    description: "New GitHub token format",
-    severity: "critical",
-    category: "developer",
-    regex: /\bgithub_pat_[A-Za-z0-9_]{70,255}\b/g
-  },
-  {
-    id: "gitlab_pat",
-    name: "GitLab PAT",
-    description: "GitLab personal access token",
-    severity: "high",
-    category: "developer",
-    regex: /\bglpat-[A-Za-z0-9\-_]{20,}\b/g
-  },
-  {
-    id: "npm_token",
-    name: "NPM Token",
-    description: "NPM registry auth token",
-    severity: "high",
-    category: "developer",
-    regex: /\bnpm_[A-Za-z0-9]{36}\b/g
-  },
-  {
-    id: "npm_auth_token",
-    name: "NPM Auth Token Assignment",
-    description: "NPM auth token entry in config files",
-    severity: "high",
-    category: "developer",
-    regex: /(?:_authToken|\/\/registry\.npmjs\.org\/:_authToken)\s*=\s*([A-Za-z0-9\-_]{20,})/gi
-  },
-  {
-    id: "pypi_token",
-    name: "PyPI Token",
-    description: "Python package index auth token",
-    severity: "high",
-    category: "developer",
-    regex: /\bpypi-[A-Za-z0-9\-_]{50,}\b/g
-  },
-  {
-    id: "slack_token",
-    name: "Slack Token",
-    description: "Slack bot/user token",
-    severity: "high",
-    category: "collaboration",
-    regex: /\bxox[baprs]-[A-Za-z0-9-]{10,120}\b/g
-  },
-  {
-    id: "slack_webhook",
-    name: "Slack Incoming Webhook",
-    description: "Slack webhook URL",
-    severity: "high",
-    category: "collaboration",
-    regex: /https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9\-_\/]{20,}/g
-  },
-  {
-    id: "discord_webhook",
-    name: "Discord Webhook",
-    description: "Discord webhook URL",
-    severity: "high",
-    category: "collaboration",
-    regex: /https:\/\/(?:discord|discordapp)\.com\/api\/webhooks\/\d+\/[A-Za-z0-9\-_]+/g
-  },
-  {
-    id: "discord_token",
-    name: "Discord Token",
-    description: "Discord user or bot token",
-    severity: "high",
-    category: "collaboration",
-    regex: /\bmfa\.[A-Za-z0-9\-_]{60,}|[MN][A-Za-z\d]{23}\.[\w-]{6}\.[\w-]{27}\b/g
-  },
-  {
-    id: "telegram_bot_token",
-    name: "Telegram Bot Token",
-    description: "Telegram bot API token",
-    severity: "high",
-    category: "collaboration",
-    regex: /\b\d{8,10}:[A-Za-z0-9_-]{30,}\b/g
-  },
-  {
-    id: "twilio_sid",
-    name: "Twilio Account SID",
-    description: "Twilio account identifier",
-    severity: "medium",
-    category: "communications",
-    regex: /\bAC[a-fA-F0-9]{32}\b/g
-  },
-  {
-    id: "twilio_auth",
-    name: "Twilio Auth Token",
-    description: "Twilio auth token assignment",
-    severity: "high",
-    category: "communications",
-    regex: /(?:twilio[_\-\s]*auth[_\-\s]*token)\s*[:=]\s*['"]?([a-fA-F0-9]{32})['"]?/gi
-  },
-  {
-    id: "sendgrid_key",
-    name: "SendGrid API Key",
-    description: "SendGrid API key",
-    severity: "high",
-    category: "communications",
-    regex: /\bSG\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b/g
-  },
-  {
-    id: "mailgun_key",
-    name: "Mailgun API Key",
-    description: "Mailgun private API key",
-    severity: "high",
-    category: "communications",
-    regex: /\bkey-[A-Za-z0-9]{32}\b/g
-  },
-  {
-    id: "mailchimp_key",
-    name: "Mailchimp API Key",
-    description: "Mailchimp account API key",
-    severity: "high",
-    category: "communications",
-    regex: /\b[0-9a-f]{32}-us\d{1,2}\b/g
+    regex: /(?:(?:aws|amazon)[\w\s-]{0,20})?(?:secret|access)[\w\s-]{0,10}(?:key)?[\s:="']+([A-Za-z0-9\/+=]{40})/gi,
+    redactionLabel: "AWS_SECRET_KEY"
   },
   {
     id: "google_api_key",
     name: "Google API Key",
-    description: "Google Cloud API key",
+    description: "Google API key beginning with AIza.",
     severity: "high",
-    category: "cloud",
-    regex: /\bAIza[0-9A-Za-z\-_]{35}\b/g
+    regex: /\bAIza[0-9A-Za-z\-_]{35}\b/g,
+    redactionLabel: "GOOGLE_API_KEY"
   },
   {
-    id: "gcp_service_account",
-    name: "GCP Service Account JSON",
-    description: "Google Cloud service account private key material",
+    id: "google_oauth_secret",
+    name: "Google OAuth Client Secret",
+    description: "Google OAuth client secret with GOCSPX prefix.",
     severity: "critical",
-    category: "cloud",
-    regex: /"type"\s*:\s*"service_account"[\s\S]{0,500}?"private_key"\s*:\s*"-----BEGIN PRIVATE KEY-----/gi
+    regex: /\bGOCSPX-[0-9A-Za-z\-_]{28,}\b/g,
+    redactionLabel: "GOOGLE_OAUTH_SECRET"
+  },
+  {
+    id: "google_service_account_private_key",
+    name: "Google Service Account Private Key",
+    description: "PEM private key embedded in service account credentials.",
+    severity: "critical",
+    regex: /-----BEGIN PRIVATE KEY-----[\s\S]{120,}-----END PRIVATE KEY-----/g,
+    redactionLabel: "PRIVATE_KEY_BLOCK"
+  },
+  {
+    id: "stripe_live_secret",
+    name: "Stripe Live Secret Key",
+    description: "Stripe live API secret key.",
+    severity: "critical",
+    regex: /\bsk_live_[0-9a-zA-Z]{20,}\b/g,
+    redactionLabel: "STRIPE_LIVE_SECRET"
+  },
+  {
+    id: "stripe_test_secret",
+    name: "Stripe Test Secret Key",
+    description: "Stripe test API secret key.",
+    severity: "high",
+    regex: /\bsk_test_[0-9a-zA-Z]{20,}\b/g,
+    redactionLabel: "STRIPE_TEST_SECRET"
+  },
+  {
+    id: "stripe_restricted_key",
+    name: "Stripe Restricted Key",
+    description: "Stripe restricted API key.",
+    severity: "high",
+    regex: /\brk_(?:live|test)_[0-9a-zA-Z]{20,}\b/g,
+    redactionLabel: "STRIPE_RESTRICTED_KEY"
+  },
+  {
+    id: "github_pat",
+    name: "GitHub Personal Access Token",
+    description: "Classic GitHub personal access token.",
+    severity: "critical",
+    regex: /\bghp_[0-9A-Za-z]{36}\b/g,
+    redactionLabel: "GITHUB_PAT"
+  },
+  {
+    id: "github_fine_grained_pat",
+    name: "GitHub Fine-Grained Token",
+    description: "Fine-grained GitHub token with github_pat_ prefix.",
+    severity: "critical",
+    regex: /\bgithub_pat_[0-9A-Za-z_]{80,}\b/g,
+    redactionLabel: "GITHUB_FINE_GRAINED_TOKEN"
+  },
+  {
+    id: "github_app_token",
+    name: "GitHub App Token",
+    description: "GitHub app installation token.",
+    severity: "high",
+    regex: /\bghs_[0-9A-Za-z]{36,}\b/g,
+    redactionLabel: "GITHUB_APP_TOKEN"
+  },
+  {
+    id: "github_refresh_token",
+    name: "GitHub Refresh Token",
+    description: "GitHub OAuth refresh token.",
+    severity: "high",
+    regex: /\bghr_[0-9A-Za-z]{36,}\b/g,
+    redactionLabel: "GITHUB_REFRESH_TOKEN"
+  },
+  {
+    id: "gitlab_pat",
+    name: "GitLab Personal Access Token",
+    description: "GitLab personal access token.",
+    severity: "high",
+    regex: /\bglpat-[0-9A-Za-z\-_]{20,}\b/g,
+    redactionLabel: "GITLAB_PAT"
+  },
+  {
+    id: "slack_token",
+    name: "Slack Token",
+    description: "Slack user/bot token beginning with xox.",
+    severity: "critical",
+    regex: /\bxox(?:a|b|p|r|s)-[0-9A-Za-z-]{10,}\b/g,
+    redactionLabel: "SLACK_TOKEN"
+  },
+  {
+    id: "slack_webhook",
+    name: "Slack Webhook URL",
+    description: "Incoming Slack webhook URL.",
+    severity: "high",
+    regex: /https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9\/_-]+/g,
+    redactionLabel: "SLACK_WEBHOOK"
+  },
+  {
+    id: "discord_webhook",
+    name: "Discord Webhook URL",
+    description: "Discord webhook endpoint.",
+    severity: "high",
+    regex: /https:\/\/discord(?:app)?\.com\/api\/webhooks\/[0-9A-Za-z\/_-]+/g,
+    redactionLabel: "DISCORD_WEBHOOK"
+  },
+  {
+    id: "discord_bot_token",
+    name: "Discord Bot Token",
+    description: "Discord bot token format.",
+    severity: "critical",
+    regex: /\b[A-Za-z0-9_-]{24}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{27}\b/g,
+    redactionLabel: "DISCORD_BOT_TOKEN"
+  },
+  {
+    id: "twilio_sid",
+    name: "Twilio Account SID",
+    description: "Twilio account SID beginning with AC.",
+    severity: "high",
+    regex: /\bAC[a-f0-9]{32}\b/gi,
+    redactionLabel: "TWILIO_SID"
+  },
+  {
+    id: "twilio_auth_token",
+    name: "Twilio Auth Token",
+    description: "Twilio auth token value.",
+    severity: "critical",
+    regex: /(?:twilio[\w\s-]{0,12})?(?:auth|token)[\w\s-]{0,5}[:=\s"']+([a-f0-9]{32})\b/gi,
+    redactionLabel: "TWILIO_AUTH_TOKEN"
+  },
+  {
+    id: "sendgrid_key",
+    name: "SendGrid API Key",
+    description: "SendGrid API key with SG prefix.",
+    severity: "critical",
+    regex: /\bSG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}\b/g,
+    redactionLabel: "SENDGRID_KEY"
+  },
+  {
+    id: "mailgun_key",
+    name: "Mailgun API Key",
+    description: "Mailgun API key.",
+    severity: "high",
+    regex: /\bkey-[0-9a-f]{32}\b/gi,
+    redactionLabel: "MAILGUN_KEY"
   },
   {
     id: "firebase_server_key",
-    name: "Firebase Server Key",
-    description: "Legacy Firebase server key",
+    name: "Firebase Cloud Messaging Key",
+    description: "Legacy Firebase server key.",
     severity: "high",
-    category: "cloud",
-    regex: /\bAAAA[A-Za-z0-9_-]{6,}:[A-Za-z0-9_-]{100,}\b/g
+    regex: /\bAAAA[A-Za-z0-9_-]{20,}:[A-Za-z0-9_-]{130,}\b/g,
+    redactionLabel: "FIREBASE_SERVER_KEY"
   },
   {
-    id: "azure_storage_conn",
-    name: "Azure Storage Connection String",
-    description: "Azure storage account secret connection string",
+    id: "openai_key",
+    name: "OpenAI API Key",
+    description: "OpenAI API key format.",
     severity: "critical",
-    category: "cloud",
-    regex: /DefaultEndpointsProtocol=https;AccountName=[^;\s]+;AccountKey=[^;\s]+;EndpointSuffix=core\.windows\.net/gi
+    regex: /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b/g,
+    redactionLabel: "OPENAI_KEY"
   },
   {
-    id: "azure_client_secret",
-    name: "Azure Client Secret",
-    description: "Azure app registration client secret",
-    severity: "high",
-    category: "cloud",
-    regex: /(?:azure|client)[_\-\s]*secret\s*[:=]\s*['"]?([A-Za-z0-9~._-]{20,})['"]?/gi
+    id: "anthropic_key",
+    name: "Anthropic API Key",
+    description: "Anthropic API key format.",
+    severity: "critical",
+    regex: /\bsk-ant-[A-Za-z0-9_-]{20,}\b/g,
+    redactionLabel: "ANTHROPIC_KEY"
   },
   {
-    id: "cloudflare_token",
-    name: "Cloudflare API Token",
-    description: "Cloudflare API token assignment",
+    id: "huggingface_token",
+    name: "HuggingFace Token",
+    description: "HuggingFace user access token.",
     severity: "high",
-    category: "cloud",
-    regex: /(?:cloudflare|cf)[_\-\s]*(?:api)?[_\-\s]*token\s*[:=]\s*['"]?([A-Za-z0-9_-]{30,})['"]?/gi
+    regex: /\bhf_[A-Za-z0-9]{30,}\b/g,
+    redactionLabel: "HUGGINGFACE_TOKEN"
+  },
+  {
+    id: "npm_token",
+    name: "NPM Token",
+    description: "NPM automation or publish token.",
+    severity: "high",
+    regex: /\bnpm_[A-Za-z0-9]{36}\b/g,
+    redactionLabel: "NPM_TOKEN"
+  },
+  {
+    id: "pypi_token",
+    name: "PyPI Token",
+    description: "PyPI API token.",
+    severity: "high",
+    regex: /\bpypi-[A-Za-z0-9_-]{70,}\b/g,
+    redactionLabel: "PYPI_TOKEN"
+  },
+  {
+    id: "docker_pat",
+    name: "Docker Personal Access Token",
+    description: "Docker access token format.",
+    severity: "high",
+    regex: /\bdckr_pat_[A-Za-z0-9_-]{20,}\b/g,
+    redactionLabel: "DOCKER_PAT"
   },
   {
     id: "digitalocean_token",
-    name: "DigitalOcean PAT",
-    description: "DigitalOcean personal access token",
+    name: "DigitalOcean Token",
+    description: "DigitalOcean API token.",
     severity: "high",
-    category: "cloud",
-    regex: /\bdop_v1_[A-Za-z0-9]{64}\b/g
+    regex: /\bdop_v1_[a-f0-9]{64}\b/gi,
+    redactionLabel: "DIGITALOCEAN_TOKEN"
   },
   {
-    id: "shopify_token",
+    id: "shopify_access_token",
     name: "Shopify Access Token",
-    description: "Shopify private app token",
-    severity: "high",
-    category: "commerce",
-    regex: /\bshpat_[a-fA-F0-9]{32}\b/g
+    description: "Shopify access token in custom app integrations.",
+    severity: "critical",
+    regex: /\bshpat_[a-f0-9]{32}\b/gi,
+    redactionLabel: "SHOPIFY_ACCESS_TOKEN"
   },
   {
     id: "square_token",
     name: "Square Access Token",
-    description: "Square access token",
+    description: "Square API access token.",
     severity: "high",
-    category: "commerce",
-    regex: /\bsq0atp-[A-Za-z0-9\-_]{20,}\b/g
+    regex: /\bsq0atp-[0-9A-Za-z_-]{22,}\b/g,
+    redactionLabel: "SQUARE_TOKEN"
   },
   {
-    id: "square_secret",
-    name: "Square OAuth Secret",
-    description: "Square OAuth secret",
+    id: "telegram_bot_token",
+    name: "Telegram Bot Token",
+    description: "Telegram bot token.",
     severity: "high",
-    category: "commerce",
-    regex: /\bsq0csp-[A-Za-z0-9\-_]{20,}\b/g
+    regex: /\b[0-9]{8,10}:[A-Za-z0-9_-]{35}\b/g,
+    redactionLabel: "TELEGRAM_BOT_TOKEN"
   },
   {
-    id: "paypal_braintree",
-    name: "Braintree Access Token",
-    description: "Braintree production access token",
-    severity: "critical",
-    category: "payments",
-    regex: /\baccess_token\$production\$[0-9a-z]{16}\$[0-9a-f]{32}\b/g
+    id: "airtable_key",
+    name: "Airtable API Key",
+    description: "Legacy Airtable API key.",
+    severity: "high",
+    regex: /\bkey[A-Za-z0-9]{14}\b/g,
+    redactionLabel: "AIRTABLE_KEY"
   },
   {
-    id: "notion_secret",
-    name: "Notion Internal Integration Token",
-    description: "Notion secret token",
+    id: "asana_token",
+    name: "Asana Personal Access Token",
+    description: "Asana token format.",
     severity: "high",
-    category: "productivity",
-    regex: /\bsecret_[A-Za-z0-9]{40,}\b/g
+    regex: /\b0\/[0-9a-z]{32}\b/g,
+    redactionLabel: "ASANA_PAT"
   },
   {
-    id: "linear_api_key",
-    name: "Linear API Key",
-    description: "Linear personal API key",
-    severity: "high",
-    category: "productivity",
-    regex: /\blin_api_[A-Za-z0-9]{20,}\b/g
+    id: "atlassian_api_token",
+    name: "Atlassian API Token",
+    description: "Atlassian API token appearing near keyword context.",
+    severity: "medium",
+    regex: /atlassian[\w\s-]{0,20}(?:token|api key)[\w\s-]{0,8}[:=\s"']+([A-Za-z0-9]{20,40})/gi,
+    redactionLabel: "ATLASSIAN_API_TOKEN"
   },
   {
-    id: "asana_pat",
-    name: "Asana PAT",
-    description: "Asana personal access token",
+    id: "notion_token",
+    name: "Notion Integration Token",
+    description: "Notion internal integration secret.",
     severity: "high",
-    category: "productivity",
-    regex: /\b0\/[0-9]{16}:[A-Za-z0-9]{32}\b/g
+    regex: /\bsecret_[A-Za-z0-9]{43}\b/g,
+    redactionLabel: "NOTION_SECRET"
+  },
+  {
+    id: "dropbox_access_token",
+    name: "Dropbox Access Token",
+    description: "Dropbox short-lived/long-lived access token.",
+    severity: "high",
+    regex: /\bsl\.[A-Za-z0-9_-]{80,}\b/g,
+    redactionLabel: "DROPBOX_TOKEN"
+  },
+  {
+    id: "algolia_admin_key",
+    name: "Algolia Admin Key",
+    description: "Potential Algolia API key in admin contexts.",
+    severity: "high",
+    regex: /algolia[\w\s-]{0,20}(?:admin|api)[\w\s-]{0,10}(?:key)?[:=\s"']+([A-Za-z0-9]{32})\b/gi,
+    redactionLabel: "ALGOLIA_ADMIN_KEY"
+  },
+  {
+    id: "cloudflare_api_token",
+    name: "Cloudflare API Token",
+    description: "Cloudflare API token-like value in Cloudflare context.",
+    severity: "high",
+    regex: /cloudflare[\w\s-]{0,20}(?:token|api key)[\w\s-]{0,10}[:=\s"']+([A-Za-z0-9_-]{30,50})\b/gi,
+    redactionLabel: "CLOUDFLARE_TOKEN"
+  },
+  {
+    id: "heroku_api_key",
+    name: "Heroku API Key",
+    description: "Heroku API key value.",
+    severity: "high",
+    regex: /heroku[\w\s-]{0,20}(?:api|auth)[\w\s-]{0,10}(?:key|token)?[:=\s"']+([0-9a-f]{32})\b/gi,
+    redactionLabel: "HEROKU_API_KEY"
   },
   {
     id: "jwt_token",
-    name: "JWT",
-    description: "JSON web token that may grant API access",
+    name: "JWT Token",
+    description: "Bearer-style JSON web token.",
     severity: "medium",
-    category: "auth",
-    regex: /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g
+    regex: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g,
+    redactionLabel: "JWT_TOKEN"
+  },
+  {
+    id: "bearer_token",
+    name: "Bearer Token",
+    description: "Generic bearer token in authorization context.",
+    severity: "high",
+    regex: /(?:authorization|bearer)[\s:"'=]{1,5}(?:bearer\s+)?([A-Za-z0-9._-]{20,})/gi,
+    redactionLabel: "BEARER_TOKEN"
+  },
+  {
+    id: "basic_auth_in_url",
+    name: "Credentials in URL",
+    description: "Username/password embedded in a URL.",
+    severity: "critical",
+    regex: /https?:\/\/[^\s:@/]{2,}:[^\s@/]{4,}@[^\s]+/gi,
+    redactionLabel: "URL_WITH_CREDENTIALS"
+  },
+  {
+    id: "postgres_connection_uri",
+    name: "PostgreSQL Connection URI",
+    description: "Postgres connection string containing credentials.",
+    severity: "critical",
+    regex: /\bpostgres(?:ql)?:\/\/[^\s:@/]+:[^\s@/]+@[^\s]+/gi,
+    redactionLabel: "POSTGRES_URI"
+  },
+  {
+    id: "mysql_connection_uri",
+    name: "MySQL Connection URI",
+    description: "MySQL connection string containing credentials.",
+    severity: "critical",
+    regex: /\bmysql:\/\/[^\s:@/]+:[^\s@/]+@[^\s]+/gi,
+    redactionLabel: "MYSQL_URI"
+  },
+  {
+    id: "mongodb_connection_uri",
+    name: "MongoDB Connection URI",
+    description: "MongoDB URI containing credentials.",
+    severity: "critical",
+    regex: /\bmongodb(?:\+srv)?:\/\/[^\s:@/]+:[^\s@/]+@[^\s]+/gi,
+    redactionLabel: "MONGODB_URI"
+  },
+  {
+    id: "redis_connection_uri",
+    name: "Redis Connection URI",
+    description: "Redis URI containing password information.",
+    severity: "high",
+    regex: /\bredis(?:s)?:\/\/(?::[^\s@/]+@)?[^\s]+/gi,
+    redactionLabel: "REDIS_URI"
   },
   {
     id: "rsa_private_key",
     name: "RSA Private Key",
-    description: "PEM-formatted RSA private key",
+    description: "RSA private key PEM block.",
     severity: "critical",
-    category: "keys",
-    regex: /-----BEGIN RSA PRIVATE KEY-----/g
-  },
-  {
-    id: "private_key_pem",
-    name: "Generic Private Key",
-    description: "PEM private key block",
-    severity: "critical",
-    category: "keys",
-    regex: /-----BEGIN PRIVATE KEY-----/g
+    regex: /-----BEGIN RSA PRIVATE KEY-----[\s\S]{120,}-----END RSA PRIVATE KEY-----/g,
+    redactionLabel: "RSA_PRIVATE_KEY"
   },
   {
     id: "ec_private_key",
     name: "EC Private Key",
-    description: "Elliptic curve private key",
+    description: "Elliptic curve private key PEM block.",
     severity: "critical",
-    category: "keys",
-    regex: /-----BEGIN EC PRIVATE KEY-----/g
+    regex: /-----BEGIN EC PRIVATE KEY-----[\s\S]{120,}-----END EC PRIVATE KEY-----/g,
+    redactionLabel: "EC_PRIVATE_KEY"
   },
   {
     id: "openssh_private_key",
     name: "OpenSSH Private Key",
-    description: "OpenSSH private key block",
+    description: "OpenSSH private key block.",
     severity: "critical",
-    category: "keys",
-    regex: /-----BEGIN OPENSSH PRIVATE KEY-----/g
+    regex: /-----BEGIN OPENSSH PRIVATE KEY-----[\s\S]{120,}-----END OPENSSH PRIVATE KEY-----/g,
+    redactionLabel: "OPENSSH_PRIVATE_KEY"
   },
   {
-    id: "pg_connection",
-    name: "Postgres Connection String",
-    description: "PostgreSQL URI with embedded credentials",
+    id: "pgp_private_key",
+    name: "PGP Private Key",
+    description: "PGP private key block.",
+    severity: "critical",
+    regex: /-----BEGIN PGP PRIVATE KEY BLOCK-----[\s\S]{120,}-----END PGP PRIVATE KEY BLOCK-----/g,
+    redactionLabel: "PGP_PRIVATE_KEY"
+  },
+  {
+    id: "azure_storage_key",
+    name: "Azure Storage Account Key",
+    description: "Base64-style Azure storage account key near context.",
     severity: "high",
-    category: "database",
-    regex: /\bpostgres(?:ql)?:\/\/[A-Za-z0-9_.%-]+:[^@\s]{6,}@[A-Za-z0-9.-]+(?::\d+)?\/[A-Za-z0-9_-]+\b/gi
+    regex: /(?:azure|storage)[\w\s-]{0,20}(?:key|secret)[\w\s-]{0,10}[:=\s"']+([A-Za-z0-9+\/]{86,88}={0,2})/gi,
+    redactionLabel: "AZURE_STORAGE_KEY"
   },
   {
-    id: "mysql_connection",
-    name: "MySQL Connection String",
-    description: "MySQL URI with embedded credentials",
+    id: "paypal_access_token",
+    name: "PayPal Access Token",
+    description: "PayPal OAuth access token style.",
     severity: "high",
-    category: "database",
-    regex: /\bmysql:\/\/[A-Za-z0-9_.%-]+:[^@\s]{6,}@[A-Za-z0-9.-]+(?::\d+)?\/[A-Za-z0-9_-]+\b/gi
+    regex: /\bA21AA[0-9A-Za-z\-_]{30,}\b/g,
+    redactionLabel: "PAYPAL_ACCESS_TOKEN"
   },
   {
-    id: "mongodb_connection",
-    name: "MongoDB Connection String",
-    description: "MongoDB URI with embedded credentials",
-    severity: "high",
-    category: "database",
-    regex: /\bmongodb(?:\+srv)?:\/\/[A-Za-z0-9_.%-]+:[^@\s]{6,}@[A-Za-z0-9.\-/,?=&_%:+]+\b/gi
-  },
-  {
-    id: "redis_connection",
-    name: "Redis Connection String",
-    description: "Redis URI with embedded credentials",
-    severity: "medium",
-    category: "database",
-    regex: /\bredis:\/\/[A-Za-z0-9_.%-]*:[^@\s]{6,}@[A-Za-z0-9.-]+(?::\d+)?(?:\/\d+)?\b/gi
-  },
-  {
-    id: "supabase_anon_key",
-    name: "Supabase Key",
-    description: "Supabase anon/service key",
-    severity: "high",
-    category: "database",
-    regex: /\bsb(?:p|s)k_[A-Za-z0-9\-_]{20,}\b/g
-  },
-  {
-    id: "vercel_token",
-    name: "Vercel Token",
-    description: "Vercel access token assignment",
-    severity: "high",
-    category: "deployment",
-    regex: /(?:vercel[_\-\s]*token|vc[_\-\s]*token)\s*[:=]\s*['"]?([A-Za-z0-9]{20,})['"]?/gi
-  },
-  {
-    id: "netlify_token",
-    name: "Netlify Token",
-    description: "Netlify personal access token assignment",
-    severity: "high",
-    category: "deployment",
-    regex: /(?:netlify[_\-\s]*(?:auth|access)?[_\-\s]*token)\s*[:=]\s*['"]?([A-Za-z0-9\-_]{20,})['"]?/gi
-  },
-  {
-    id: "render_api_key",
-    name: "Render API Key",
-    description: "Render API key assignment",
-    severity: "high",
-    category: "deployment",
-    regex: /(?:render[_\-\s]*api[_\-\s]*key)\s*[:=]\s*['"]?([A-Za-z0-9\-_]{20,})['"]?/gi
-  },
-  {
-    id: "docker_auth",
-    name: "Docker Auth Blob",
-    description: "Encoded Docker registry auth value",
-    severity: "medium",
-    category: "devops",
-    regex: /"auth"\s*:\s*"[A-Za-z0-9+/=]{20,}"/g
-  },
-  {
-    id: "kubernetes_token",
-    name: "Kubernetes Bearer Token",
-    description: "Kubernetes token in kubeconfig",
-    severity: "high",
-    category: "devops",
-    regex: /(?:kubernetes|k8s)[\s\S]{0,80}?token\s*:\s*['"]?([A-Za-z0-9\-_.]{20,})['"]?/gi
-  },
-  {
-    id: "datadog_api_key",
-    name: "Datadog API Key",
-    description: "Datadog API key assignment",
-    severity: "high",
-    category: "monitoring",
-    regex: /(?:datadog[_\-\s]*api[_\-\s]*key|dd[_\-\s]*api[_\-\s]*key)\s*[:=]\s*['"]?([a-f0-9]{32})['"]?/gi
-  },
-  {
-    id: "newrelic_license",
-    name: "New Relic License Key",
-    description: "New Relic ingest license key",
-    severity: "high",
-    category: "monitoring",
-    regex: /(?:new[_\-\s]*relic[_\-\s]*license[_\-\s]*key)\s*[:=]\s*['"]?([A-Za-z0-9]{40})['"]?/gi
-  },
-  {
-    id: "sentry_dsn",
-    name: "Sentry DSN",
-    description: "Sentry DSN with auth segment",
-    severity: "medium",
-    category: "monitoring",
-    regex: /https:\/\/[a-f0-9]{32}@[A-Za-z0-9.-]+\.ingest\.sentry\.io\/\d+/gi
-  },
-  {
-    id: "algolia_api_key",
-    name: "Algolia API Key",
-    description: "Algolia API key assignment",
-    severity: "medium",
-    category: "search",
-    regex: /(?:algolia[_\-\s]*api[_\-\s]*key)\s*[:=]\s*['"]?([A-Za-z0-9]{20,})['"]?/gi
-  },
-  {
-    id: "basic_auth_header",
-    name: "Basic Authorization Header",
-    description: "HTTP basic auth header with encoded credentials",
-    severity: "medium",
-    category: "auth",
-    regex: /Authorization\s*:\s*Basic\s+[A-Za-z0-9+/=]{16,}/gi
-  },
-  {
-    id: "bearer_token_assignment",
-    name: "Bearer Token Assignment",
-    description: "Assigned bearer token string",
-    severity: "medium",
-    category: "auth",
-    regex: /(?:bearer[_\-\s]*token|access[_\-\s]*token)\s*[:=]\s*['"]?([A-Za-z0-9\-_.]{20,})['"]?/gi
+    id: "private_key_generic",
+    name: "Generic Private Key Block",
+    description: "Generic PEM private key block.",
+    severity: "critical",
+    regex: /-----BEGIN (?:ENCRYPTED )?PRIVATE KEY-----[\s\S]{120,}-----END (?:ENCRYPTED )?PRIVATE KEY-----/g,
+    redactionLabel: "PRIVATE_KEY"
   },
   {
     id: "api_key_assignment",
     name: "Generic API Key Assignment",
-    description: "High-entropy api key style assignment",
-    severity: "medium",
-    category: "generic",
-    regex: /(?:api[_\-\s]*key|secret[_\-\s]*key|app[_\-\s]*secret)\s*[:=]\s*['"]?([A-Za-z0-9\-_+/=]{20,})['"]?/gi
+    description: "API key assignment in config-style key/value text.",
+    severity: "high",
+    regex: /(?:api[_-]?key|access[_-]?token|secret[_-]?key|client[_-]?secret)\s*[:=]\s*["']([A-Za-z0-9_\-\/.+=]{16,})["']/gi,
+    redactionLabel: "GENERIC_API_KEY"
   },
   {
     id: "password_assignment",
     name: "Password Assignment",
-    description: "Credential assignment containing a non-trivial password",
-    severity: "medium",
-    category: "generic",
-    regex: /(?:password|passwd|pwd)\s*[:=]\s*['"]?([^\s'";]{8,})['"]?/gi
+    description: "Password-like value assigned in plain text.",
+    severity: "high",
+    regex: /(?:password|passwd|pwd)\s*[:=]\s*["']([^"'\n]{8,})["']/gi,
+    redactionLabel: "PASSWORD_VALUE"
+  },
+  {
+    id: "private_key_env",
+    name: "Private Key Environment Variable",
+    description: "Private key material in an env-style variable.",
+    severity: "critical",
+    regex: /(?:PRIVATE_KEY|SECRET_KEY|SIGNING_KEY)\s*=\s*['"]?[A-Za-z0-9+\/=_-]{40,}['"]?/gi,
+    redactionLabel: "PRIVATE_ENV_KEY"
+  },
+  {
+    id: "connection_string",
+    name: "Credentialed Connection String",
+    description: "Connection string with explicit user/password parameters.",
+    severity: "high",
+    regex: /(?:connection|string|dsn)[\w\s-]{0,10}[:=\s"']+[^\n]*(?:user|uid)=\S+[^\n]*(?:password|pwd)=\S+/gi,
+    redactionLabel: "CONNECTION_STRING"
   }
 ];
+
+export const PATTERN_COUNT = SECRET_PATTERNS.length;

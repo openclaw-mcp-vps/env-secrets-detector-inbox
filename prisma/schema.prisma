@@ -1,0 +1,31 @@
+// Reference schema for teams who later migrate to a SQL backend.
+// Runtime persistence in this build is implemented in lib/database.ts using a JSON file.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id
+  paid            Boolean  @default(false)
+  paidEmail       String?
+  paidSource      String?
+  paidAt          DateTime?
+  gmailConnectedAt DateTime?
+  createdAt       DateTime
+  updatedAt       DateTime
+}
+
+model ScanJob {
+  id                 String   @id
+  userId             String
+  status             String
+  query              String
+  maxMessages        Int
+  processedMessages  Int
+  attachmentsScanned Int
+  createdAt          DateTime
+  startedAt          DateTime?
+  finishedAt         DateTime?
+}

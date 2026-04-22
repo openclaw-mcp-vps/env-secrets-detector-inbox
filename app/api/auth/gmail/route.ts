@@ -1,65 +1,78 @@
-import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { GMAIL_MAILBOX_COOKIE, GMAIL_OAUTH_STATE_COOKIE } from "@/lib/constants";
-import { upsertGmailConnection } from "@/lib/database";
-import { exchangeCodeForGmailTokens, getGmailAuthUrl } from "@/lib/gmail";
+import { clearUserGmailTokens, ensureUser, saveUserGmailTokens } from "@/lib/database";
+import {
+  createOAuthState,
+  getAuthorizedUserIdFromCookieStore,
+  parseOAuthState,
+  setSessionCookie
+} from "@/lib/auth";
+import { exchangeCodeForGmailTokens, gmailAuthUrl } from "@/lib/gmail";
 
-export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  const code = request.nextUrl.searchParams.get("code");
-  const state = request.nextUrl.searchParams.get("state");
-  const oauthError = request.nextUrl.searchParams.get("error");
+function redirectWithError(request: NextRequest, message: string) {
+  const url = new URL("/dashboard", request.url);
+  url.searchParams.set("gmail", "error");
+  url.searchParams.set("message", message);
+  return NextResponse.redirect(url);
+}
 
-  if (oauthError) {
-    return NextResponse.redirect(new URL(`/dashboard?gmail_error=${encodeURIComponent(oauthError)}`, request.url));
+export async function GET(request: NextRequest) {
+  const authorizedUserId = getAuthorizedUserIdFromCookieStore((name) => request.cookies.get(name));
+
+  if (!authorizedUserId) {
+    const loginUrl = new URL("/", request.url);
+    loginUrl.searchParams.set("unlock", "required");
+    return NextResponse.redirect(loginUrl);
   }
 
-  const secure = process.env.NODE_ENV === "production";
+  await ensureUser(authorizedUserId);
+
+  const params = request.nextUrl.searchParams;
+  const error = params.get("error");
+  const code = params.get("code");
+
+  if (error) {
+    return redirectWithError(request, error);
+  }
 
   if (!code) {
-    const nonce = randomUUID();
-    const authUrl = getGmailAuthUrl(request.nextUrl.origin, nonce);
+    const state = createOAuthState(authorizedUserId);
+    const authUrl = gmailAuthUrl(request.nextUrl.origin, state);
     const response = NextResponse.redirect(authUrl);
-
-    response.cookies.set(GMAIL_OAUTH_STATE_COOKIE, nonce, {
-      httpOnly: true,
-      secure,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 10
-    });
-
+    setSessionCookie(response, authorizedUserId);
     return response;
   }
 
-  const expectedState = request.cookies.get(GMAIL_OAUTH_STATE_COOKIE)?.value;
+  const state = params.get("state");
+  const parsed = parseOAuthState(state);
 
-  if (!state || !expectedState || expectedState !== state) {
-    return NextResponse.redirect(new URL("/dashboard?gmail_error=invalid_state", request.url));
+  if (!parsed || parsed.userId !== authorizedUserId) {
+    return redirectWithError(request, "invalid_oauth_state");
   }
 
   try {
-    const { mailbox, tokens } = await exchangeCodeForGmailTokens(request.nextUrl.origin, code);
-    await upsertGmailConnection(mailbox, tokens);
+    const tokens = await exchangeCodeForGmailTokens(request.nextUrl.origin, code);
+    await saveUserGmailTokens(authorizedUserId, tokens);
 
-    const response = NextResponse.redirect(new URL("/dashboard?gmail=connected", request.url));
+    const redirectUrl = new URL("/dashboard", request.url);
+    redirectUrl.searchParams.set("gmail", "connected");
 
-    response.cookies.set(GMAIL_OAUTH_STATE_COOKIE, "", {
-      path: "/",
-      maxAge: 0
-    });
-
-    response.cookies.set(GMAIL_MAILBOX_COOKIE, mailbox, {
-      httpOnly: true,
-      secure,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 90
-    });
-
+    const response = NextResponse.redirect(redirectUrl);
+    setSessionCookie(response, authorizedUserId);
     return response;
   } catch {
-    return NextResponse.redirect(new URL("/dashboard?gmail_error=oauth_exchange_failed", request.url));
+    return redirectWithError(request, "token_exchange_failed");
   }
+}
+
+export async function DELETE(request: NextRequest) {
+  const authorizedUserId = getAuthorizedUserIdFromCookieStore((name) => request.cookies.get(name));
+
+  if (!authorizedUserId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await clearUserGmailTokens(authorizedUserId);
+  return NextResponse.json({ ok: true });
 }

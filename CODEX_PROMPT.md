@@ -11,7 +11,7 @@ NICHE: security
 PRICE: $$19/mo per mailbox/mo
 
 ARCHITECTURE SPEC:
-Next.js app with Gmail OAuth integration that scans email content and attachments for leaked credentials using regex patterns. Backend processes emails in batches, stores scan results, and provides a dashboard with security reports and redaction tools.
+Next.js app with Gmail OAuth integration that scans email content and attachments for leaked credentials using regex patterns. Background job processes emails, stores findings in database, and provides dashboard with redaction tools and security reports.
 
 PLANNED FILES:
 - app/page.tsx
@@ -20,15 +20,16 @@ PLANNED FILES:
 - app/api/scan/route.ts
 - app/api/webhooks/lemonsqueezy/route.ts
 - lib/gmail.ts
-- lib/secrets-detector.ts
+- lib/scanner.ts
 - lib/patterns.ts
 - lib/database.ts
 - lib/lemonsqueezy.ts
-- components/scan-results.tsx
-- components/redaction-tool.tsx
-- components/pricing.tsx
+- components/ScanResults.tsx
+- components/RedactionTool.tsx
+- components/SecurityReport.tsx
+- prisma/schema.prisma
 
-DEPENDENCIES: next, tailwindcss, googleapis, prisma, @prisma/client, next-auth, @lemonsqueezy/lemonsqueezy.js, zod, lucide-react, recharts
+DEPENDENCIES: next, tailwindcss, prisma, @prisma/client, googleapis, next-auth, @auth/prisma-adapter, @lemonsqueezy/lemonsqueezy.js, zod, lucide-react, recharts, pdf-parse, mammoth
 
 REQUIREMENTS:
 - Next.js 15 with App Router (app/ directory)
@@ -36,7 +37,7 @@ REQUIREMENTS:
 - Tailwind CSS v4
 - shadcn/ui components (npx shadcn@latest init, then add needed components)
 - Dark theme ONLY — background #0d1117, no light mode
-- Lemon Squeezy checkout overlay for payments
+- Stripe Payment Link for payments (hosted checkout — use the URL directly as the Buy button href)
 - Landing page that converts: hero, problem, solution, pricing, FAQ
 - The actual tool/feature behind a paywall (cookie-based access after purchase)
 - Mobile responsive
@@ -56,9 +57,13 @@ REQUIREMENTS:
   to package.json dependencies and re-run npm install + npm run build until it passes.
 
 ENVIRONMENT VARIABLES (create .env.example):
-- NEXT_PUBLIC_LEMON_SQUEEZY_STORE_ID
-- NEXT_PUBLIC_LEMON_SQUEEZY_PRODUCT_ID
-- LEMON_SQUEEZY_WEBHOOK_SECRET
+- NEXT_PUBLIC_STRIPE_PAYMENT_LINK  (full URL, e.g. https://buy.stripe.com/test_XXX)
+- NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY  (pk_test_... or pk_live_...)
+- STRIPE_WEBHOOK_SECRET  (set when webhook is wired)
+
+BUY BUTTON RULE: the Buy button's href MUST be `process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK`
+used as-is — do NOT construct URLs from a product ID, do NOT prepend any base URL,
+do NOT wrap it in an embed iframe. The link opens Stripe's hosted checkout directly.
 
 After creating all files:
 1. Run: npm install

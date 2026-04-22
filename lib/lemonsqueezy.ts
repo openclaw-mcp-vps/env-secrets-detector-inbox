@@ -1,122 +1,45 @@
-import crypto from "node:crypto";
+import "server-only";
 
-export interface LemonSqueezyWebhookPayload {
-  meta?: {
-    event_name?: string;
-    custom_data?: Record<string, unknown>;
-  };
-  data?: {
-    id?: string | number;
-    attributes?: {
-      user_email?: string;
-      customer_id?: string | number;
-      status?: string;
-      renews_at?: string;
-      ends_at?: string;
-      custom_data?: Record<string, unknown>;
-    };
-  };
+import Stripe from "stripe";
+
+export function getStripeClient(): Stripe | null {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    return null;
+  }
+
+  return new Stripe(secretKey);
 }
 
-export function verifyWebhookSignature(rawBody: string, signature: string | null): boolean {
-  const secret = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET;
-  if (!secret || !signature) {
-    return false;
+export function verifyStripeWebhookEvent(rawBody: string, signature: string): Stripe.Event {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  const stripe = getStripeClient();
+
+  if (!secret || !stripe) {
+    throw new Error("Stripe webhook environment variables are not configured.");
   }
 
-  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
-  const expectedBuffer = Buffer.from(expected, "utf8");
-  const incomingBuffer = Buffer.from(signature, "utf8");
-
-  if (expectedBuffer.length !== incomingBuffer.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(expectedBuffer, incomingBuffer);
+  return stripe.webhooks.constructEvent(rawBody, signature, secret);
 }
 
-function getCheckoutBaseUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_LEMON_SQUEEZY_CHECKOUT_URL;
-  if (explicit && explicit.startsWith("http")) {
-    return explicit;
-  }
-
-  const productId = process.env.NEXT_PUBLIC_LEMON_SQUEEZY_PRODUCT_ID;
-  if (!productId) {
-    throw new Error("NEXT_PUBLIC_LEMON_SQUEEZY_PRODUCT_ID is missing.");
-  }
-
-  if (productId.startsWith("http")) {
-    return productId;
-  }
-
-  return `https://checkout.lemonsqueezy.com/buy/${productId}`;
+export interface StripeCheckoutEntitlement {
+  email: string;
+  customerId?: string;
+  checkoutSessionId?: string;
 }
 
-export function buildCheckoutUrl(mailbox?: string): string {
-  const base = getCheckoutBaseUrl();
-  const checkoutUrl = new URL(base);
+export function entitlementFromCheckoutSession(
+  session: Stripe.Checkout.Session
+): StripeCheckoutEntitlement | null {
+  const email = session.customer_details?.email ?? session.customer_email;
 
-  if (mailbox) {
-    checkoutUrl.searchParams.set("checkout[email]", mailbox);
-    checkoutUrl.searchParams.set("checkout[custom][mailbox]", mailbox);
+  if (!email) {
+    return null;
   }
-
-  checkoutUrl.searchParams.set("checkout[custom][tool]", "inbox-secrets-detector");
-  checkoutUrl.searchParams.set("checkout[custom][plan]", "mailbox-monthly-19");
-
-  return checkoutUrl.toString();
-}
-
-export function extractPaidMailbox(payload: LemonSqueezyWebhookPayload): {
-  mailbox: string | null;
-  orderId: string | undefined;
-  customerId: string | undefined;
-  eventName: string;
-  validUntil: string | undefined;
-} {
-  const eventName = payload.meta?.event_name ?? "unknown";
-  const customMailbox = payload.meta?.custom_data?.mailbox;
-  const attrMailbox = payload.data?.attributes?.custom_data?.mailbox;
-  const emailMailbox = payload.data?.attributes?.user_email;
-  const mailboxCandidate = customMailbox ?? attrMailbox ?? emailMailbox;
-
-  const mailbox = typeof mailboxCandidate === "string" && mailboxCandidate.includes("@")
-    ? mailboxCandidate.toLowerCase().trim()
-    : null;
-
-  const orderId = payload.data?.id ? String(payload.data.id) : undefined;
-  const customerId = payload.data?.attributes?.customer_id
-    ? String(payload.data.attributes.customer_id)
-    : undefined;
-
-  const validUntil =
-    payload.data?.attributes?.renews_at ?? payload.data?.attributes?.ends_at ?? undefined;
 
   return {
-    mailbox,
-    orderId,
-    customerId,
-    eventName,
-    validUntil
+    email: email.toLowerCase(),
+    customerId: typeof session.customer === "string" ? session.customer : undefined,
+    checkoutSessionId: session.id
   };
-}
-
-export function isPaymentEvent(eventName: string): boolean {
-  const accepted = new Set([
-    "order_created",
-    "order_refunded",
-    "subscription_created",
-    "subscription_updated",
-    "subscription_cancelled",
-    "subscription_expired",
-    "subscription_resumed",
-    "subscription_unpaused"
-  ]);
-
-  return accepted.has(eventName);
-}
-
-export function isRevocationEvent(eventName: string): boolean {
-  return eventName === "order_refunded" || eventName === "subscription_expired";
 }
